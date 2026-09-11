@@ -141,13 +141,21 @@ function buildAcceptanceEmail(data) {
           <p style="margin: 5px 0;"><strong>Qui vient :</strong> ${guestNames}</p>
           <p style="margin: 5px 0;"><strong>Couchage :</strong> ${data.sleeping === 'oui' ? 'Demande inscrite sur la liste' : 'Non sur place'}</p>
           ${data.food !== 'aucun' ? `<p style="margin: 5px 0;"><strong>Infos diet/allergies :</strong> ${data.food}</p>` : ''}
+          ${data.arrivalStation ? `<p style="margin: 5px 0;"><strong>Arrivée :</strong> ${data.arrivalStation}</p>` : ''}
         </div>
 
         <p style="margin: 20px 0; color: #45382e;">À très vite pour fêter ça ensemble ! 🎉</p>
 
+        <p style="margin: 15px 0; color: #66704e; font-size: 13px;">
+          <strong>Gîte Deldadetcha</strong><br>
+          901 route du Bousquet<br>
+          40230 Saubrigues
+        </p>
+
         <div style="border-top: 1px solid #d9cbbb; padding-top: 20px; margin-top: 20px; text-align: center; color: #66704e; font-size: 13px;">
           <p style="margin: 0;">Stéphanie & David</p>
           <p style="margin: 5px 0 0 0;"><em>6 – 9 mai 2027</em></p>
+          <p style="margin: 5px 0 0 0;"><em>Un peu de bohème, beaucoup de love et surtout zéro prise de tête ✦</em></p>
         </div>
       </div>
     </div>
@@ -176,6 +184,7 @@ function buildDeclineEmail(data) {
         <div style="border-top: 1px solid #d9cbbb; padding-top: 20px; margin-top: 20px; text-align: center; color: #66704e; font-size: 13px;">
           <p style="margin: 0;">Stéphanie & David</p>
           <p style="margin: 5px 0 0 0;"><em>6 – 9 mai 2027</em></p>
+          <p style="margin: 5px 0 0 0;"><em>Un peu de bohème, beaucoup de love et surtout zéro prise de tête ✦</em></p>
         </div>
       </div>
     </div>
@@ -190,8 +199,34 @@ function notifyOrganizers(data) {
     return; // Ne pas envoyer si l'email n'est pas configuré
   }
 
-  const subject = `[RSVP] ${data.name} - ${data.attendance === 'oui' ? 'CONFIRMED' : 'DECLINED'}`;
-  const body = `Nouvelle réponse reçue le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}:\n\nNom: ${data.name}\nTéléphone: ${data.phone}\nEmail: ${data.email}\nPrésence: ${data.attendance}\nArrivée: ${data.arrival}\nDépart: ${data.departure}\nNombre de personnes: ${parseInt(data.adults) + parseInt(data.children)}\n\nMessage: ${data.message || '(aucun)'}`;
+  const subject = `[RSVP] ${data.name} - ${data.attendance === 'oui' ? 'CONFIRMED ✓' : 'DECLINED ✗'}`;
+  const guestList = data.guests
+    .map(g => `${g.name}${g.type === 'enfant' ? ` (${g.age} ans)` : ''}`)
+    .join(', ');
+
+  const body = `Nouvelle réponse reçue le ${new Date(data.confirmedAt).toLocaleDateString('fr-FR')} à ${new Date(data.confirmedAt).toLocaleTimeString('fr-FR')}:
+
+NOM: ${data.name}
+TÉLÉPHONE: ${data.phone}
+EMAIL: ${data.email}
+PRÉSENCE: ${data.attendance === 'oui' ? 'CONFIRMÉ ✓' : 'REFUSÉ ✗'}
+
+${data.attendance === 'oui' ? `
+DATES:
+  Arrivée: ${data.arrival} ${data.arrivalTime ? 'à ' + data.arrivalTime : ''}
+  Départ: ${data.departure} ${data.departureTime ? 'à ' + data.departureTime : ''}
+
+NOMBRE DE PERSONNES: ${parseInt(data.adults) + parseInt(data.children)}
+  - Adultes: ${data.adults}
+  - Enfants: ${data.children}
+  - Prénoms: ${guestList}
+
+COUCHAGE: ${data.sleeping === 'oui' ? 'Demande inscrite' : 'Non'}
+ARRIVÉE (gare/aéroport): ${data.arrivalStation || 'N/A'}
+RÉGIME/ALLERGIES: ${data.food || 'Aucun'}
+
+MESSAGE: ${data.message || '(aucun)'}
+` : ''}`;
 
   try {
     MailApp.sendEmail(ORGANIZER_EMAIL, subject, body);
