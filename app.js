@@ -101,7 +101,7 @@ document.querySelectorAll('[data-step]').forEach(button => {
     
     values[key] = Math.max(minValue, Math.min(maxValue, values[key] + delta));
     document.querySelector(`#${key}Value`).textContent = values[key];
-    form.elements[key].value = values[key];
+    if (form.elements[key]) form.elements[key].value = values[key];
     renderGuestDetails();
   });
 });
