@@ -24,6 +24,8 @@ function doPost(event) {
       sheet.appendRow([
         'Reçu le',
         'Nom',
+        'Type',
+        'Âge',
         'Téléphone',
         'E-mail',
         'Présence',
@@ -31,9 +33,6 @@ function doPost(event) {
         'Heure d\'arrivée',
         'Jour de départ',
         'Heure de départ',
-        'Adultes',
-        'Enfants',
-        'Invités (prénoms)',
         'Couchage',
         'Gare/Aéroport',
         'Régime/Allergies',
@@ -42,29 +41,26 @@ function doPost(event) {
       sheet.setFrozenRows(1);
     }
 
-    // Ajouter la réponse
-    const guestList = data.guests
-      .map(g => `${g.name}${g.type === 'enfant' ? ` (${g.age} ans)` : ''}`)
-      .join(', ');
-
-    sheet.appendRow([
-      data.confirmedAt,
-      data.name,
-      data.phone,
-      data.email,
-      data.attendance,
-      data.arrival,
-      data.arrivalTime,
-      data.departure,
-      data.departureTime,
-      data.adults,
-      data.children,
-      guestList,
-      data.sleeping,
-      data.arrivalStation,
-      data.food,
-      data.message
-    ]);
+    // Créer une ligne pour chaque invité
+    data.guests.forEach(guest => {
+      sheet.appendRow([
+        data.confirmedAt,
+        guest.name,
+        guest.type === 'adulte' ? 'Adulte' : 'Enfant',
+        guest.age || '',
+        data.phone,
+        data.email,
+        data.attendance === 'oui' ? 'Oui' : 'Non',
+        data.attendance === 'oui' ? data.arrival : '',
+        data.attendance === 'oui' ? data.arrivalTime : '',
+        data.attendance === 'oui' ? data.departure : '',
+        data.attendance === 'oui' ? data.departureTime : '',
+        data.sleeping === 'oui' ? 'Oui' : 'Non',
+        data.arrivalStation || '',
+        data.food || '',
+        data.message || ''
+      ]);
+    });
 
     // Envoyer l'email de confirmation
     sendConfirmationEmail(data);
@@ -73,7 +69,7 @@ function doPost(event) {
     notifyOrganizers(data);
 
     // Logger le succès
-    logEvent(data.email, 'SUCCESS', `Réponse de ${data.name} enregistrée avec succès`);
+    logEvent(data.email, 'SUCCESS', `Réponse de ${data.name} enregistrée avec succès (${data.guests.length} personne(s))`);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -140,7 +136,7 @@ function buildAcceptanceEmail(data) {
           <p style="margin: 5px 0;"><strong>Nombre de personnes :</strong> ${parseInt(data.adults) + parseInt(data.children)} (${data.adults} adulte(s), ${data.children} enfant(s))</p>
           <p style="margin: 5px 0;"><strong>Qui vient :</strong> ${guestNames}</p>
           <p style="margin: 5px 0;"><strong>Couchage :</strong> ${data.sleeping === 'oui' ? 'Demande inscrite sur la liste' : 'Non sur place'}</p>
-          ${data.food !== 'aucun' ? `<p style="margin: 5px 0;"><strong>Infos diet/allergies :</strong> ${data.food}</p>` : ''}
+          ${data.food !== 'aucun' && data.food ? `<p style="margin: 5px 0;"><strong>Infos diet/allergies :</strong> ${data.food}</p>` : ''}
           ${data.arrivalStation ? `<p style="margin: 5px 0;"><strong>Arrivée :</strong> ${data.arrivalStation}</p>` : ''}
         </div>
 
