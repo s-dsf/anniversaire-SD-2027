@@ -6,7 +6,7 @@ const submitButton = form.querySelector('.submit');
 const values = { adults: 1, children: 0 };
 
 // URL du Google Apps Script (à garder à jour)
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYG7A64yKEnifhRWUj5knZSeWWbazZETcZFOyrijeasr8vJxiIkd19gji0HbrEq7Lb/exec';
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMSb3IOqzkVif7PzBhOQT3hKVoH6O_RO0S2LcIq2L_VMn6BuhgoHZ_vRhIUebaCBK4/exec';
 
 /**
  * Crée dynamiquement les champs pour les noms des invités
