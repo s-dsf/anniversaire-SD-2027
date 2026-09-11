@@ -79,38 +79,94 @@ form.addEventListener('submit', async event => {
 
   try {
     // Collecter les données du formulaire
-    const data = Object.fromEntries(new FormData(form));
+    const formData = Object.fromEntries(new FormData(form));
     
-    // Ajouter les détails des invités
-    data.guests = Array.from({ length: values.adults }, (_, index) => ({
-      name: data[`adultName${index + 1}`],
-      type: 'adulte'
-    }))
-    .concat(Array.from({ length: values.children }, (_, index) => ({
-      name: data[`childName${index + 1}`],
-      age: data[`childAge${index + 1}`],
-      type: 'enfant'
-    })));
+    // Créer un tableau de lignes à ajouter au Google Sheet
+    const rows = [];
     
-    // Ajouter le timestamp
-    data.confirmedAt = new Date().toISOString();
+    // Ajouter une ligne pour chaque adulte
+    for (let index = 1; index <= values.adults; index++) {
+      const adultName = formData[`adultName${index}`];
+      if (adultName) {
+        rows.push({
+          'Reçu le': new Date().toLocaleString('fr-FR'),
+          'Nom': adultName,
+          'E-mail': formData.email || '',
+          'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
+          'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
+          'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
+          'Adultes': '',
+          'Enfants': '',
+          'Âges enfants': '',
+          'Régime / allergies': formData.food || '',
+          'Transport': formData.arrivalStation || '',
+          'Message': formData.message || ''
+        });
+      }
+    }
+    
+    // Ajouter une ligne pour chaque enfant
+    for (let index = 1; index <= values.children; index++) {
+      const childName = formData[`childName${index}`];
+      const childAge = formData[`childAge${index}`];
+      if (childName && childAge) {
+        rows.push({
+          'Reçu le': new Date().toLocaleString('fr-FR'),
+          'Nom': childName,
+          'E-mail': formData.email || '',
+          'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
+          'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
+          'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
+          'Adultes': '',
+          'Enfants': '',
+          'Âges enfants': `${childAge} ans`,
+          'Régime / allergies': formData.food || '',
+          'Transport': '',
+          'Message': ''
+        });
+      }
+    }
+    
+    // Si aucun invité n'a été ajouté, ajouter la personne principale
+    if (rows.length === 0) {
+      rows.push({
+        'Reçu le': new Date().toLocaleString('fr-FR'),
+        'Nom': formData.name || '',
+        'E-mail': formData.email || '',
+        'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
+        'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
+        'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
+        'Adultes': '1',
+        'Enfants': '0',
+        'Âges enfants': '',
+        'Régime / allergies': formData.food || '',
+        'Transport': formData.arrivalStation || '',
+        'Message': formData.message || ''
+      });
+    }
     
     // Sauvegarder localement (backup)
-    localStorage.setItem('anniversaire-rsvp', JSON.stringify(data));
+    localStorage.setItem('anniversaire-rsvp', JSON.stringify({ 
+      contactName: formData.name,
+      contactEmail: formData.email,
+      rows: rows 
+    }));
 
-    // Envoyer les données au Google Apps Script
-    const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(data)
-    });
+    // Envoyer chaque ligne au Google Apps Script
+    for (const row of rows) {
+      await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(row)
+      });
+    }
 
     // Message de succès personnalisé
-    const isComing = data.attendance === 'oui';
+    const isComing = formData.attendance === 'oui';
     successMessage.innerHTML = isComing
-      ? `<strong>${data.name}</strong>, c'est noté ! 🎉<br><br>Un email de confirmation t'a été envoyé à <strong>${data.email}</strong>. À très vite pour fêter ça !`
-      : `<strong>${data.name}</strong>, merci beaucoup pour ta réponse ! 💌<br><br>Un email de confirmation t'a été envoyé à <strong>${data.email}</strong>.`;
+      ? `<strong>${formData.name}</strong>, c'est noté ! 🎉<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>. À très vite pour fêter ça !`
+      : `<strong>${formData.name}</strong>, merci beaucoup pour ta réponse ! 💌<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>.`;
 
   } catch (error) {
     // Gestion des erreurs
