@@ -23,28 +23,34 @@ function populateFormWithSavedData() {
   const savedData = getSavedData();
   if (!savedData) return;
 
+  // Helper sécurisé — évite un crash si le champ n'existe pas dans le HTML
+  function setField(name, value) {
+    const el = form.elements[name];
+    if (el) el.value = value ?? '';
+  }
+
   // Remplir les champs simples
-  form.elements.name.value = savedData.name || '';
-  form.elements.phone.value = savedData.phone || '';
-  form.elements.email.value = savedData.email || '';
-  form.elements.attendance.value = savedData.attendance || 'oui';
-  form.elements.arrival.value = savedData.arrival || 'jeudi 6 mai';
-  form.elements.arrivalTime.value = savedData.arrivalTime || '';
-  form.elements.departure.value = savedData.departure || 'dimanche 9 mai';
-  form.elements.departureTime.value = savedData.departureTime || '';
-  form.elements.transport.value = savedData.transport || '';
-  form.elements.sleeping.value = savedData.sleeping || 'oui';
-  form.elements.arrivalStation.value = savedData.arrivalStation || '';
-  form.elements.food.value = savedData.food || 'aucun';
-  form.elements.message.value = savedData.message || '';
+  setField('name', savedData.name);
+  setField('phone', savedData.phone);
+  setField('email', savedData.email);
+  setField('attendance', savedData.attendance || 'oui');
+  setField('arrival', savedData.arrival || 'jeudi 6 mai');
+  setField('arrivalTime', savedData.arrivalTime);
+  setField('departure', savedData.departure || 'dimanche 9 mai');
+  setField('departureTime', savedData.departureTime);
+  setField('transport', savedData.transport);
+  setField('sleeping', savedData.sleeping || 'oui');
+  setField('arrivalStation', savedData.arrivalStation);
+  setField('food', savedData.food || 'aucun');
+  setField('message', savedData.message);
 
   // Restaurer le nombre d'adultes et d'enfants
   values.adults = parseInt(savedData.adults) || 1;
   values.children = parseInt(savedData.children) || 0;
   document.querySelector('#adultsValue').textContent = values.adults;
   document.querySelector('#childrenValue').textContent = values.children;
-  form.elements.adults.value = values.adults;
-  form.elements.children.value = values.children;
+  setField('adults', values.adults);
+  setField('children', values.children);
 
   // Afficher/masquer les champs de présence
   if (savedData.attendance === 'non') {
@@ -192,19 +198,14 @@ form.addEventListener('submit', async event => {
     console.log('📤 Envoi des données:', globalData);
 
     // Envoyer les données globales au Google Apps Script
-    const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+    // mode 'no-cors' + Content-Type 'text/plain' évite le preflight CORS bloqué par GitHub Pages
+    await fetch(GOOGLE_APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(globalData)
     });
-
-    console.log('📨 Réponse du serveur:', response.status, response.statusText);
-    const responseText = await response.text();
-    console.log('📋 Contenu de la réponse:', responseText);
-
-    if (!response.ok) {
-      console.warn('⚠️ Réponse serveur non-ok:', response.status, response.statusText);
-    }
+    console.log('✅ Données envoyées au script Google (réponse opaque — normal en no-cors)');
 
     // Message de succès personnalisé
     const isComing = formData.attendance === 'oui';
