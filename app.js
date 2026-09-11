@@ -9,23 +9,74 @@ const values = { adults: 1, children: 0 };
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2iRe6GvjgrKUSEcm6dos8ZX8jog7pM9gOHPnkj1XVlLbo59VCt0PQALJ9Kw92DU42/exec';
 
 /**
+ * Récupère les données sauvegardées en localStorage
+ */
+function getSavedData() {
+  const saved = localStorage.getItem('anniversaire-rsvp');
+  return saved ? JSON.parse(saved) : null;
+}
+
+/**
+ * Remplit le formulaire avec les données sauvegardées
+ */
+function populateFormWithSavedData() {
+  const savedData = getSavedData();
+  if (!savedData) return;
+
+  // Remplir les champs simples
+  form.elements.name.value = savedData.name || '';
+  form.elements.phone.value = savedData.phone || '';
+  form.elements.email.value = savedData.email || '';
+  form.elements.attendance.value = savedData.attendance || 'oui';
+  form.elements.arrival.value = savedData.arrival || 'jeudi 6 mai';
+  form.elements.arrivalTime.value = savedData.arrivalTime || '';
+  form.elements.departure.value = savedData.departure || 'dimanche 9 mai';
+  form.elements.departureTime.value = savedData.departureTime || '';
+  form.elements.transport.value = savedData.transport || '';
+  form.elements.sleeping.value = savedData.sleeping || 'oui';
+  form.elements.arrivalStation.value = savedData.arrivalStation || '';
+  form.elements.food.value = savedData.food || 'aucun';
+  form.elements.message.value = savedData.message || '';
+
+  // Restaurer le nombre d'adultes et d'enfants
+  values.adults = parseInt(savedData.adults) || 1;
+  values.children = parseInt(savedData.children) || 0;
+  document.querySelector('#adultsValue').textContent = values.adults;
+  document.querySelector('#childrenValue').textContent = values.children;
+  form.elements.adults.value = values.adults;
+  form.elements.children.value = values.children;
+
+  // Afficher/masquer les champs de présence
+  if (savedData.attendance === 'non') {
+    document.querySelector('.attendance-fields').style.display = 'none';
+  }
+
+  renderGuestDetails();
+}
+
+/**
  * Crée dynamiquement les champs pour les noms des invités
  */
 function renderGuestDetails() {
   const fields = [];
+  const savedData = getSavedData();
   
   // Ajouter les champs pour les adultes
   for (let index = 1; index <= values.adults; index += 1) {
+    const savedName = savedData?.guests?.find(g => g.type === 'adulte' && g.name)?.name || '';
     fields.push(
-      `<label>Prénom de l'adulte ${index}<input required name="adultName${index}" placeholder="Prénom" /></label>`
+      `<label>Prénom de l'adulte ${index}<input required name="adultName${index}" placeholder="Prénom" value="${savedName || ''}" /></label>`
     );
   }
   
   // Ajouter les champs pour les enfants
   for (let index = 1; index <= values.children; index += 1) {
+    const savedChild = savedData?.guests?.find(g => g.type === 'enfant' && g.name);
+    const savedName = savedChild?.name || '';
+    const savedAge = savedChild?.age || '';
     fields.push(
-      `<label>Prénom de l'enfant ${index}<input required name="childName${index}" placeholder="Prénom" /></label>` +
-      `<label>Âge de l'enfant ${index}<input required type="number" min="0" max="18" name="childAge${index}" placeholder="Âge" /></label>`
+      `<label>Prénom de l'enfant ${index}<input required name="childName${index}" placeholder="Prénom" value="${savedName || ''}" /></label>` +
+      `<label>Âge de l'enfant ${index}<input required type="number" min="0" max="18" name="childAge${index}" placeholder="Âge" value="${savedAge || ''}" /></label>`
     );
   }
   
@@ -120,6 +171,7 @@ form.addEventListener('submit', async event => {
       arrivalTime: formData.arrivalTime || '',
       departure: formData.departure || '',
       departureTime: formData.departureTime || '',
+      transport: formData.transport || '',
       adults: values.adults,
       children: values.children,
       guests: guests,
@@ -128,6 +180,11 @@ form.addEventListener('submit', async event => {
       food: formData.food || '',
       message: formData.message || ''
     };
+    
+    // Vérifier si c'est une modification
+    const savedData = getSavedData();
+    const isModification = savedData && savedData.email === globalData.email;
+    globalData.isModification = isModification;
     
     // Sauvegarder localement (backup)
     localStorage.setItem('anniversaire-rsvp', JSON.stringify(globalData));
@@ -151,9 +208,15 @@ form.addEventListener('submit', async event => {
 
     // Message de succès personnalisé
     const isComing = formData.attendance === 'oui';
-    successMessage.innerHTML = isComing
-      ? `<strong>${formData.name}</strong>, c'est noté ! 🎉<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>. À très vite pour fêter ça !`
-      : `<strong>${formData.name}</strong>, merci beaucoup pour ta réponse ! 💌<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>.`;
+    if (isModification) {
+      successMessage.innerHTML = isComing
+        ? `<strong>${formData.name}</strong>, ta réponse a été mise à jour ! 🎉<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>.`
+        : `<strong>${formData.name}</strong>, ta réponse a bien été modifiée ! 💌<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>.`;
+    } else {
+      successMessage.innerHTML = isComing
+        ? `<strong>${formData.name}</strong>, c'est noté ! 🎉<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>. À très vite pour fêter ça !`
+        : `<strong>${formData.name}</strong>, merci beaucoup pour ta réponse ! 💌<br><br>Un email de confirmation t'a été envoyé à <strong>${formData.email}</strong>.`;
+    }
 
   } catch (error) {
     // Gestion des erreurs
@@ -185,4 +248,4 @@ document.querySelector('#editResponse').addEventListener('click', () => {
 });
 
 // Initialisation
-renderGuestDetails();
+populateFormWithSavedData();
