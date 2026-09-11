@@ -1,9 +1,13 @@
 /**
+ * Anniversaire S&D 2027 - Google Apps Script
  * À placer dans Extensions > Apps Script de la feuille de réponses,
  * puis Déployer > Gérer les déploiements > Modifier > Nouvelle version.
  * Type : application web ; exécuter en tant que : vous ; accès : toute personne.
  */
+
 const SHEET_NAME = 'Réponses';
+const LOG_SHEET_NAME = 'Logs';
+const ORGANIZER_EMAIL = 'stephanieetdavid@example.com'; // À remplacer par votre email
 
 function doGet() {
   return ContentService.createTextOutput('Le formulaire RSVP est prêt.');
@@ -15,32 +19,203 @@ function doPost(event) {
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = spreadsheet.getSheetByName(SHEET_NAME) || spreadsheet.insertSheet(SHEET_NAME);
 
+    // Créer l'en-tête si la feuille est vide
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['Reçu le', 'Nom', 'Téléphone', 'E-mail', 'Présence', 'Jour d’arrivée', 'Heure d’arrivée', 'Jour de départ', 'Heure de départ', 'Adultes', 'Enfants', 'Invités (prénoms / âges)', 'Dort sur place', 'Transport', 'Gare / aéroport d’arrivée', 'Régime / allergies', 'Message']);
+      sheet.appendRow([
+        'Reçu le',
+        'Nom',
+        'Téléphone',
+        'E-mail',
+        'Présence',
+        'Jour d\'arrivée',
+        'Heure d\'arrivée',
+        'Jour de départ',
+        'Heure de départ',
+        'Adultes',
+        'Enfants',
+        'Invités (prénoms)',
+        'Couchage',
+        'Gare/Aéroport',
+        'Régime/Allergies',
+        'Message'
+      ]);
       sheet.setFrozenRows(1);
     }
-    sheet.appendRow([data.confirmedAt, data.name, data.phone, data.email, data.attendance, data.arrival, data.arrivalTime, data.departure, data.departureTime, data.adults, data.children, JSON.stringify(data.guests || []), data.sleeping, data.transport, data.arrivalStation, data.food, data.message]);
+
+    // Ajouter la réponse
+    const guestList = data.guests
+      .map(g => `${g.name}${g.type === 'enfant' ? ` (${g.age} ans)` : ''}`)
+      .join(', ');
+
+    sheet.appendRow([
+      data.confirmedAt,
+      data.name,
+      data.phone,
+      data.email,
+      data.attendance,
+      data.arrival,
+      data.arrivalTime,
+      data.departure,
+      data.departureTime,
+      data.adults,
+      data.children,
+      guestList,
+      data.sleeping,
+      data.arrivalStation,
+      data.food,
+      data.message
+    ]);
+
+    // Envoyer l'email de confirmation
     sendConfirmationEmail(data);
-    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+
+    // Notifier les organisateurs
+    notifyOrganizers(data);
+
+    // Logger le succès
+    logEvent(data.email, 'SUCCESS', `Réponse de ${data.name} enregistrée avec succès`);
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: error.message })).setMimeType(ContentService.MimeType.JSON);
+    logEvent('UNKNOWN', 'ERROR', error.message + ' | ' + error.stack);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
+/**
+ * Envoie un email de confirmation personnalisé à l'invité
+ */
 function sendConfirmationEmail(data) {
   const isComing = data.attendance === 'oui';
+  
   const subject = isComing
-    ? 'C’est noté ! Rendez-vous du 6 au 9 mai 2027 ✦'
-    : 'Merci pour ta réponse';
-  const message = isComing
-    ? `Hello ${data.name},\n\nTrop chouette, ta réponse est bien enregistrée !\n\nTu nous rejoins du ${data.arrival || '…'} au ${data.departure || '…'}.\n${data.sleeping === 'oui' ? 'Tu es inscrit(e) sur la liste pour le couchage : on te recontacte dès que la disponibilité est confirmée.\n' : ''}\nÀ très vite pour fêter la quarantaine de Stéphanie et David !\n\n✦ Stéphanie & David`
-    : `Hello ${data.name},\n\nMerci beaucoup pour ta réponse. Tu vas nous manquer, mais on pense fort à toi !\n\n✦ Stéphanie & David`;
-  const html = message.replace(/\n/g, '<br>');
-  MailApp.sendEmail({
-    to: data.email,
-    subject,
-    body: message,
-    htmlBody: `<div style="font-family:Arial,sans-serif;color:#45382e;line-height:1.6">${html}</div>`,
-    name: 'Stéphanie & David · Mai 2027'
-  });
+    ? '✦ C\'est noté ! Rendez-vous du 6 au 9 mai 2027'
+    : '✦ Merci beaucoup pour ta réponse';
+
+  const htmlContent = isComing
+    ? buildAcceptanceEmail(data)
+    : buildDeclineEmail(data);
+
+  try {
+    MailApp.sendEmail({
+      to: data.email,
+      subject: subject,
+      htmlBody: htmlContent,
+      name: 'Stéphanie & David · Mai 2027'
+    });
+    Logger.log(`Email envoyé à ${data.email}`);
+  } catch (error) {
+    logEvent(data.email, 'EMAIL_ERROR', `Erreur lors de l'envoi: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Construit l'email HTML pour une réponse positive
+ */
+function buildAcceptanceEmail(data) {
+  const guestNames = data.guests
+    .map(g => `${g.name}${g.type === 'enfant' ? ` (${g.age} ans)` : ''}`)
+    .join(', ');
+
+  return `
+    <div style="font-family: 'DM Sans', Arial, sans-serif; color: #45382e; line-height: 1.8; background: linear-gradient(135deg, #f7f0e5 0%, #ede1ce 100%); padding: 40px 20px;">
+      <div style="max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="font-size: 32px; margin-bottom: 10px;">✦</div>
+          <h1 style="margin: 0; font-size: 24px; font-family: 'Playfair Display', serif;">Trop chouette !</h1>
+          <p style="margin: 5px 0 0 0; color: #aa654d; font-style: italic;">Ta réponse est bien enregistrée</p>
+        </div>
+
+        <p style="margin: 20px 0; color: #45382e;">Salut <strong>${data.name}</strong>,</p>
+
+        <p style="margin: 15px 0; color: #45382e;">Super, tu nous rejoins ! Voici un résumé de ta confirmation :</p>
+
+        <div style="background: #f7f0e5; padding: 20px; border-left: 4px solid #aa654d; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Arrivée :</strong> ${data.arrival} ${data.arrivalTime ? 'à ' + data.arrivalTime : ''}</p>
+          <p style="margin: 5px 0;"><strong>Départ :</strong> ${data.departure} ${data.departureTime ? 'à ' + data.departureTime : ''}</p>
+          <p style="margin: 5px 0;"><strong>Nombre de personnes :</strong> ${parseInt(data.adults) + parseInt(data.children)} (${data.adults} adulte(s), ${data.children} enfant(s))</p>
+          <p style="margin: 5px 0;"><strong>Qui vient :</strong> ${guestNames}</p>
+          <p style="margin: 5px 0;"><strong>Couchage :</strong> ${data.sleeping === 'oui' ? 'Demande inscrite sur la liste' : 'Non sur place'}</p>
+          ${data.food !== 'aucun' ? `<p style="margin: 5px 0;"><strong>Infos diet/allergies :</strong> ${data.food}</p>` : ''}
+        </div>
+
+        <p style="margin: 20px 0; color: #45382e;">À très vite pour fêter ça ensemble ! 🎉</p>
+
+        <div style="border-top: 1px solid #d9cbbb; padding-top: 20px; margin-top: 20px; text-align: center; color: #66704e; font-size: 13px;">
+          <p style="margin: 0;">Stéphanie & David</p>
+          <p style="margin: 5px 0 0 0;"><em>6 – 9 mai 2027</em></p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Construit l'email HTML pour une réponse négative
+ */
+function buildDeclineEmail(data) {
+  return `
+    <div style="font-family: 'DM Sans', Arial, sans-serif; color: #45382e; line-height: 1.8; background: linear-gradient(135deg, #f7f0e5 0%, #ede1ce 100%); padding: 40px 20px;">
+      <div style="max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="font-size: 32px; margin-bottom: 10px;">✦</div>
+          <h1 style="margin: 0; font-size: 24px; font-family: 'Playfair Display', serif;">Merci pour ta réponse</h1>
+        </div>
+
+        <p style="margin: 20px 0; color: #45382e;">Salut <strong>${data.name}</strong>,</p>
+
+        <p style="margin: 15px 0; color: #45382e;">Merci beaucoup de nous avoir répondu. Tu vas nous manquer, mais on pense fort à toi !</p>
+
+        <p style="margin: 20px 0; color: #45382e;">N'hésite pas à nous recontacter si tes plans changent avant le 15 novembre.</p>
+
+        <div style="border-top: 1px solid #d9cbbb; padding-top: 20px; margin-top: 20px; text-align: center; color: #66704e; font-size: 13px;">
+          <p style="margin: 0;">Stéphanie & David</p>
+          <p style="margin: 5px 0 0 0;"><em>6 – 9 mai 2027</em></p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Notifie les organisateurs d'une nouvelle réponse
+ */
+function notifyOrganizers(data) {
+  if (!ORGANIZER_EMAIL || ORGANIZER_EMAIL === 'stephanieetdavid@example.com') {
+    return; // Ne pas envoyer si l'email n'est pas configuré
+  }
+
+  const subject = `[RSVP] ${data.name} - ${data.attendance === 'oui' ? 'CONFIRMED' : 'DECLINED'}`;
+  const body = `Nouvelle réponse reçue le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}:\n\nNom: ${data.name}\nTéléphone: ${data.phone}\nEmail: ${data.email}\nPrésence: ${data.attendance}\nArrivée: ${data.arrival}\nDépart: ${data.departure}\nNombre de personnes: ${parseInt(data.adults) + parseInt(data.children)}\n\nMessage: ${data.message || '(aucun)'}`;
+
+  try {
+    MailApp.sendEmail(ORGANIZER_EMAIL, subject, body);
+  } catch (error) {
+    Logger.log('Erreur lors de la notification des organisateurs: ' + error.message);
+  }
+}
+
+/**
+ * Enregistre les événements dans une feuille de log
+ */
+function logEvent(email, status, message) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let logSheet = spreadsheet.getSheetByName(LOG_SHEET_NAME);
+
+  if (!logSheet) {
+    logSheet = spreadsheet.insertSheet(LOG_SHEET_NAME);
+    logSheet.appendRow(['Timestamp', 'Email', 'Status', 'Message']);
+  }
+
+  logSheet.appendRow([
+    new Date().toISOString(),
+    email,
+    status,
+    message
+  ]);
 }
