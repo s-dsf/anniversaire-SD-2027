@@ -81,86 +81,65 @@ form.addEventListener('submit', async event => {
     // Collecter les données du formulaire
     const formData = Object.fromEntries(new FormData(form));
     
-    // Créer un tableau de lignes à ajouter au Google Sheet
-    const rows = [];
+    // Construire un tableau d'objets pour chaque personne
+    const guests = [];
     
-    // Ajouter une ligne pour chaque adulte
+    // Ajouter les adultes
     for (let index = 1; index <= values.adults; index++) {
       const adultName = formData[`adultName${index}`];
       if (adultName) {
-        rows.push({
-          'Reçu le': new Date().toLocaleString('fr-FR'),
-          'Nom': adultName,
-          'E-mail': formData.email || '',
-          'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
-          'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
-          'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
-          'Adultes': '',
-          'Enfants': '',
-          'Âges enfants': '',
-          'Régime / allergies': formData.food || '',
-          'Transport': formData.arrivalStation || '',
-          'Message': formData.message || ''
+        guests.push({
+          name: adultName,
+          type: 'adulte',
+          age: null
         });
       }
     }
     
-    // Ajouter une ligne pour chaque enfant
+    // Ajouter les enfants
     for (let index = 1; index <= values.children; index++) {
       const childName = formData[`childName${index}`];
       const childAge = formData[`childAge${index}`];
       if (childName && childAge) {
-        rows.push({
-          'Reçu le': new Date().toLocaleString('fr-FR'),
-          'Nom': childName,
-          'E-mail': formData.email || '',
-          'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
-          'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
-          'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
-          'Adultes': '',
-          'Enfants': '',
-          'Âges enfants': `${childAge} ans`,
-          'Régime / allergies': formData.food || '',
-          'Transport': '',
-          'Message': ''
+        guests.push({
+          name: childName,
+          type: 'enfant',
+          age: parseInt(childAge)
         });
       }
     }
     
-    // Si aucun invité n'a été ajouté, ajouter la personne principale
-    if (rows.length === 0) {
-      rows.push({
-        'Reçu le': new Date().toLocaleString('fr-FR'),
-        'Nom': formData.name || '',
-        'E-mail': formData.email || '',
-        'Présence': formData.attendance === 'oui' ? 'Oui' : 'Non',
-        'Arrivée': formData.attendance === 'oui' ? (formData.arrival || '') : '',
-        'Départ': formData.attendance === 'oui' ? (formData.departure || '') : '',
-        'Adultes': '1',
-        'Enfants': '0',
-        'Âges enfants': '',
-        'Régime / allergies': formData.food || '',
-        'Transport': formData.arrivalStation || '',
-        'Message': formData.message || ''
-      });
-    }
+    // Créer un objet de données global (pour infos générales)
+    const globalData = {
+      confirmedAt: new Date().toISOString(),
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      attendance: formData.attendance,
+      arrival: formData.arrival || '',
+      arrivalTime: formData.arrivalTime || '',
+      departure: formData.departure || '',
+      departureTime: formData.departureTime || '',
+      adults: values.adults,
+      children: values.children,
+      guests: guests,
+      sleeping: formData.sleeping || '',
+      arrivalStation: formData.arrivalStation || '',
+      food: formData.food || '',
+      message: formData.message || ''
+    };
     
     // Sauvegarder localement (backup)
-    localStorage.setItem('anniversaire-rsvp', JSON.stringify({ 
-      contactName: formData.name,
-      contactEmail: formData.email,
-      rows: rows 
-    }));
+    localStorage.setItem('anniversaire-rsvp', JSON.stringify(globalData));
 
-    // Envoyer chaque ligne au Google Apps Script
-    for (const row of rows) {
-      await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(row)
-      });
-    }
+    // Envoyer les données globales au Google Apps Script
+    // (qui créera une ligne par personne)
+    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(globalData)
+    });
 
     // Message de succès personnalisé
     const isComing = formData.attendance === 'oui';
