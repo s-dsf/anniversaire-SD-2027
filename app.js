@@ -132,14 +132,22 @@ form.addEventListener('submit', async event => {
     // Sauvegarder localement (backup)
     localStorage.setItem('anniversaire-rsvp', JSON.stringify(globalData));
 
+    console.log('📤 Envoi des données:', globalData);
+
     // Envoyer les données globales au Google Apps Script
-    // (qui créera une ligne par personne)
-    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+    const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(globalData)
     });
+
+    console.log('📨 Réponse du serveur:', response.status, response.statusText);
+    const responseText = await response.text();
+    console.log('📋 Contenu de la réponse:', responseText);
+
+    if (!response.ok) {
+      console.warn('⚠️ Réponse serveur non-ok:', response.status, response.statusText);
+    }
 
     // Message de succès personnalisé
     const isComing = formData.attendance === 'oui';
@@ -149,7 +157,7 @@ form.addEventListener('submit', async event => {
 
   } catch (error) {
     // Gestion des erreurs
-    console.error('Erreur lors de l\'envoi:', error);
+    console.error('❌ Erreur lors de l\'envoi:', error);
     successMessage.innerHTML = `
       <strong>Oups !</strong><br><br>
       Ta réponse a bien été sauvegardée sur cet appareil, mais n'a pas pu être envoyée à nos serveurs.<br><br>
