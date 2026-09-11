@@ -250,3 +250,4 @@ document.querySelector('#editResponse').addEventListener('click', () => {
 
 // Initialisation
 populateFormWithSavedData();
+renderGuestDetails(); // appel inconditionnel : affiche les champs dès le premier chargement
