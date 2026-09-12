@@ -34,6 +34,72 @@
         </div>
       </section>
 
+      <section class="programme">
+        <div class="section-heading">
+          <h2>Le programme<br /><em>du week-end</em></h2>
+          <p class="programme-subtitle">Les logements sont disponibles du jeudi au dimanche selon les places disponibles — à préciser lors de ton inscription.</p>
+        </div>
+        <div class="programme-timeline">
+          <div class="programme-day">
+            <span class="day-label">Jeu. 6 mai</span>
+            <h3>Arrivées</h3>
+            <p>Le gîte ouvre ses portes. Pose tes bagages et retrouve les premières têtes connues.</p>
+          </div>
+          <div class="programme-day is-highlight">
+            <span class="day-label">Ven. 7 mai</span>
+            <h3>La soirée ✦</h3>
+            <p>Le grand soir — grandes tablées, musique, verres qui tintent et danse jusqu'au bout.</p>
+          </div>
+          <div class="programme-day">
+            <span class="day-label">Sam. 8 mai</span>
+            <h3>Brunch &amp; farniente</h3>
+            <p>Brunch collectif le matin. L'après-midi est libre pour ceux qui restent sur place.</p>
+          </div>
+          <div class="programme-day">
+            <span class="day-label">Dim. 9 mai</span>
+            <h3>Départs</h3>
+            <p>On se dit au revoir jusqu'au prochain chapitre.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="acces">
+        <div class="section-heading">
+          <h2>Comment<br /><em>venir ?</em></h2>
+        </div>
+        <div class="acces-grid">
+          <article class="acces-card">
+            <div class="acces-icon">✈</div>
+            <div>
+              <h3>Aéroport de Biarritz <span class="acces-tag">~25 min</span></h3>
+              <p>Biarritz Pays Basque (BIQ) — le plus proche. Navette ou taxi jusqu'au gîte.</p>
+            </div>
+          </article>
+          <article class="acces-card">
+            <div class="acces-icon">🚆</div>
+            <div>
+              <h3>Gare de Bayonne <span class="acces-tag">~30 min</span></h3>
+              <p>Desservie en TGV depuis Paris (~4h) et Bordeaux (~1h30). Taxi ou covoiturage depuis la gare.</p>
+            </div>
+          </article>
+          <article class="acces-card">
+            <div class="acces-icon">🚆</div>
+            <div>
+              <h3>Gare de Dax <span class="acces-tag">~35 min</span></h3>
+              <p>Arrêt TGV Paris-Bordeaux-Hendaye. Pratique si tu descends depuis le nord.</p>
+            </div>
+          </article>
+          <article class="acces-card">
+            <div class="acces-icon">✈</div>
+            <div>
+              <h3>Aéroport de Bordeaux <span class="acces-tag">~1h45</span></h3>
+              <p>Bordeaux-Mérignac (BOD) — idéal si ton vol ne va pas jusqu'à Biarritz.</p>
+            </div>
+          </article>
+        </div>
+        <p class="acces-note">Indique ta gare ou ton aéroport d'arrivée dans le formulaire — on coordonne les covoiturages au mieux !</p>
+      </section>
+
       <section class="notes">
         <p>« Un peu de bohème, beaucoup de love et surtout zéro prise de tête. »</p>
         <div class="notes-grid"><div><span>Dress code</span><strong>Bohème chic, beige, écru &amp; tons naturels</strong></div><div><span>Les kids</span><strong>Ils sont les bienvenus !</strong></div><div><span>Hébergement</span><strong>Sur demande (nombre limité)</strong></div></div>
@@ -48,7 +114,7 @@
           <div class="attendance-fields">
             <div class="form-row"><label>Tu arrives quand ?<select name="arrival"><option value="jeudi 6 mai">Jeudi 6 mai</option><option value="vendredi 7 mai">Vendredi 7 mai</option><option value="samedi 8 mai">Samedi 8 mai</option><option value="dimanche 9 mai">Dimanche 9 mai</option></select></label><label>Tu repars quand ?<select name="departure"><option value="vendredi 7 mai">Vendredi 7 mai</option><option value="samedi 8 mai">Samedi 8 mai</option><option value="dimanche 9 mai" selected>Dimanche 9 mai</option><option value="lundi 10 mai">Lundi 10 mai</option></select></label></div>
             <div class="form-row"><label>Heure d'arrivée <small>(si tu la connais)</small><input type="time" name="arrivalTime" /></label><label>Heure de départ <small>(si tu la connais)</small><input type="time" name="departureTime" /></label></div>
-            <div class="form-row"><label>Comment tu viens ?<select name="transport" required><option value="">-- Sélectionne --</option><option value="voiture">En voiture</option><option value="train">En train</option><option value="avion">En avion</option><option value="autre">Autre</option></select></label><label>Gare ou aéroport d'arrivée<input name="arrivalStation" placeholder="Ex. Biarritz Pays Basque" /></label></div>
+            <label>Gare ou aéroport d'arrivée <small>(pour coordonner les covoiturages)</small><input name="arrivalStation" placeholder="Ex. Gare de Bayonne, Aéroport de Biarritz…" /></label>
             <div class="guests"><label>Adultes <div class="stepper"><button type="button" data-step="adults" data-delta="-1" aria-label="Moins d'adultes">−</button><output id="adultsValue">1</output><button type="button" data-step="adults" data-delta="+1" aria-label="Plus d'adultes">+</button></div></label><label>Enfants <div class="stepper"><button type="button" data-step="children" data-delta="-1" aria-label="Moins d'enfants">−</button><output id="childrenValue">0</output><button type="button" data-step="children" data-delta="+1" aria-label="Plus d'enfants">+</button></div></label></div>
             <div id="guestDetails" class="guest-details" aria-live="polite"></div>
             <div class="form-row"><label>Tu dors sur place ?<select name="sleeping"><option value="oui">Je m'inscris sur la liste pour le couchage</option><option value="non">Non, je rentre / je loge ailleurs</option></select></label><label>Régime ou allergies<select name="food"><option value="aucun">Aucun</option><option value="vegetarien">Végétarien</option><option value="vegan">Végétalien</option><option value="glutenFree">Sans gluten</option><option value="autre">Autre (à préciser ci-dessous)</option></select></label></div>
